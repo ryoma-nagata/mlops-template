@@ -1,0 +1,19 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+parameters:
+- name: DATASET_FILE
+  type: string
+- name: DATASET_NAME
+  type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Register dataset
+    inputs:
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+      scriptType: bash
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        az ml data create -f ${{ parameters.DATASET_FILE }} -n ${{ parameters.DATASET_NAME }}

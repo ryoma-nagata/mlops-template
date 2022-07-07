@@ -1,0 +1,5 @@
+$schema: https://azuremlschemas.azureedge.net/latest/model.schema.json
+name: "override config-mlops.yml"
+description: <sample-string>
+type: mlflow_model 
+# azureml://jobs/<jobId>/outputs/artifacts/paths/model/ 

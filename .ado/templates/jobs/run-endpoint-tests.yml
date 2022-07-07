@@ -1,0 +1,23 @@
+jobs:
+  - job: batch
+    displayName: Test batch deploy
+    steps:
+      - template: components/setup-ml.yml
+      - template: components/test-deployment.yml
+        parameters:
+          DEPLOYMENT_NAME: $(BATCH_DEPLOYMENT_NAME)
+          ENDPOINT_NAME: $(BATCH_ENDPOINT_NAME)
+          SAMPLE_REQUEST: $(BATCH_SAMPLE_REQUEST)
+          ENDPOINT_TYPE: batch
+          REQUEST_TYPE: $(BATCH_REQUEST_TYPE) #either uri_folder or uri_file 
+  - job: online
+    displayName: Test online deploy
+    steps:
+      - template: components/setup-ml.yml
+      - template: components/test-deployment.yml
+        parameters:
+          DEPLOYMENT_NAME: $(ONLINE_DEPLOYMENT_NAME)
+          ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)
+          SAMPLE_REQUEST: $(ONLINE_SAMPLE_REQUEST)
+          ENDPOINT_TYPE: online
+          REQUEST_TYPE: json 

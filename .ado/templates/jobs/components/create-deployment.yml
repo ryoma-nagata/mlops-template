@@ -1,0 +1,61 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+parameters:
+- name: DEPLOYMENT_FILE
+  type: string
+- name: DEPLOYMENT_NAME
+  type: string
+- name: ENDPOINT_TYPE
+  type: string
+- name: ENDPOINT_NAME
+  type: string
+- name: MODEL_NAME
+  type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Create online deployment
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        set -o xtrace
+        DEPLOYMENT_EXISTS=$(az ml ${{ parameters.ENDPOINT_TYPE }}-deployment list -e ${{ parameters.ENDPOINT_NAME }} -o tsv --query "[?name=='${{ parameters.DEPLOYMENT_NAME }}'][name]" | wc -l)
+        az ml ${{ parameters.ENDPOINT_TYPE }}-deployment list -e ${{ parameters.ENDPOINT_NAME }} -o tsv 
+        
+        if [[ $DEPLOYMENT_EXISTS -ne 1 ]]; then
+            echo "Create"
+            az ml ${{ parameters.ENDPOINT_TYPE }}-deployment create \
+              -f ${{ parameters.DEPLOYMENT_FILE }} \
+              -n ${{ parameters.DEPLOYMENT_NAME }} \
+              -e ${{ parameters.ENDPOINT_NAME }} \
+              --set model=${{ parameters.MODEL_NAME }}
+        else
+            echo "Update"
+            az ml ${{ parameters.ENDPOINT_TYPE }}-deployment update \
+              -f ${{ parameters.DEPLOYMENT_FILE }} \
+              -n ${{ parameters.DEPLOYMENT_NAME }} \
+              -e ${{ parameters.ENDPOINT_NAME }} \
+              --set model=${{ parameters.MODEL_NAME }}
+        fi
+    condition: and(succeeded(), eq('${{ parameters.ENDPOINT_TYPE }}', 'online'))
+
+  - task: AzureCLI@2
+    displayName: Create batch deployment
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -o xtrace
+        az ml ${{ parameters.ENDPOINT_TYPE }}-deployment create \
+         -f ${{ parameters.DEPLOYMENT_FILE }} \
+         -n ${{ parameters.DEPLOYMENT_NAME }} \
+         -e ${{ parameters.ENDPOINT_NAME }} \
+         --set model=${{ parameters.MODEL_NAME }}
+    condition: and(succeeded(), eq('${{ parameters.ENDPOINT_TYPE }}', 'batch'))

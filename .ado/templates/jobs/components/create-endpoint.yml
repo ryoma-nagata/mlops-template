@@ -1,0 +1,32 @@
+parameters: 
+- name: ENDPOINT_FILE
+  type: string
+- name: ENDPOINT_NAME
+  type: string
+- name: ENDPOINT_TYPE
+  type: string
+  # value: online,batch
+
+steps:
+  - task: AzureCLI@2
+    displayName: Create online/batch endpoint 
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        ENDPOINT_EXISTS=$(az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint list -o tsv --query "[?name=='${{ parameters.ENDPOINT_NAME }}'][name]" | wc -l)
+        echo $ENDPOINT_NAME $ENDPOINT_EXISTS
+        az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint list -o tsv
+
+        if [[ $ENDPOINT_EXISTS -ne 1 ]]; then
+            az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint create  \
+              -f ${{ parameters.ENDPOINT_FILE }} \
+              -n ${{ parameters.ENDPOINT_NAME }}
+        else
+            echo "Endpoint exists"
+            az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint update  \
+              -f ${{ parameters.ENDPOINT_FILE }} \
+              -n ${{ parameters.ENDPOINT_NAME }}
+        fi

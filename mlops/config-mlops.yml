@@ -1,0 +1,24 @@
+variables:
+  # override parameters of azure ml 
+  # Train
+  TRAINING_ENVIRONMENT_NAME: <sample-string>
+  TRAINING_DATASET_NAME: <sample-string>
+  TRAINING_EXPERIMENT_NAME: <sample-string>
+
+  # Model registry
+  MODEL_NAME: <sample-string>
+  MODEL_PATH: <sample-string>
+
+  # Batch deploy
+  SCORING_DATASET_NAME: <sample-string>
+  BATCH_ENDPOINT_NAME: <sample-string> # バッチジョブの実験名になります.リージョンで一意になること
+  BATCH_DEPLOYMENT_NAME: <sample-string>
+  # Test batch
+  BATCH_SAMPLE_REQUEST: data/<sample>.csv
+  BATCH_REQUEST_TYPE: uri_file
+
+  # Online deploy
+  ONLINE_ENDPOINT_NAME: <sample-string> # リージョンで一意になること
+  ONLINE_DEPLOYMENT_NAME: <sample-string>
+  # Test online
+  ONLINE_SAMPLE_REQUEST: data/<sample-string>.json

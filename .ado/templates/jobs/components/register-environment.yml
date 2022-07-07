@@ -1,0 +1,32 @@
+parameters:
+- name: BUILD_TYPE
+  type: string
+- name: ENVIRONMENT_FILE
+  type: string
+- name: ENVIRONMENT_NAME
+  type: string
+  
+steps:
+  - task: AzureCLI@2
+    displayName: Register Azure ML environment (docker)
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      scriptLocation: inlineScript
+      inlineScript: |
+        az ml environment create --file ${{ parameters.ENVIRONMENT_FILE }} --name ${{ parameters.ENVIRONMENT_NAME }}
+    condition: and(succeeded(), eq('${{ parameters.BUILD_TYPE }}', 'docker'))
+
+  - task: AzureCLI@2
+    displayName: Register Azure ML environment (conda)
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      scriptLocation: inlineScript
+      inlineScript: |
+        az ml environment create --file ${{ parameters.ENVIRONMENT_FILE }} --name ${{ parameters.ENVIRONMENT_NAME }}
+    condition: and(succeeded(), eq('${{ parameters.BUILD_TYPE }}', 'conda'))

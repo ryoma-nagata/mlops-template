@@ -1,0 +1,6 @@
+variables:
+# Setup情報
+  AZURE_SUBSCRIPTION_ID: ''
+  RESOURCE_GROUP_NAME: ''
+  AML_WORKSPACE_NAME: ''
+  

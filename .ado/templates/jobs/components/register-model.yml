@@ -1,0 +1,26 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+parameters:
+- name: MODEL_FILE
+  type: string
+- name: MODEL_NAME
+  type: string
+- name: MODEL_PATH
+  type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Register trained model
+    inputs:
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME)
+      scriptType: bash
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        set -e
+        echo ${{ parameters.MODEL_PATH }}
+        echo ${{ parameters.MODEL_NAME }}
+        echo ${{ parameters.MODEL_FILE }}
+
+        az ml model create -f ${{ parameters.MODEL_FILE }}  --path ${{ parameters.MODEL_PATH }} -n ${{ parameters.MODEL_NAME }}

@@ -1,0 +1,142 @@
+name: mlops-deploy-prod-ct-cd-pipeline-$(rev:r)
+
+trigger:
+  branches: 
+    include:
+      - 'main'
+      - 'master'
+
+# pr: # PRトリガーはAzure Reposの場合、branch policyで実装します。https://docs.microsoft.com/ja-jp/azure/devops/pipelines/repos/azure-repos-git?view=azure-devops&tabs=yaml#pr-triggers
+  # branches:
+  #   include:
+  #     - 'main'
+  #     - 'release/*'
+resources:
+  pipelines:
+  - pipeline: ciartifacts
+    source: mlops-deploy-dev-ci-pipeline  # ci用のPipeline名に修正する
+
+# Global変数定義
+variables:
+  - name: MLOPS_ARTIFACTS_ROOT
+    value: $(Pipeline.Workspace)/ciartifacts/mlops
+  - name: ENVIRONMENT
+    value: prod
+  - name: AZURE_RESOURCE_MANAGER_CONNECTION_NAME
+    value: "azure-devops-service-connection" # Update to '{yourResourceManagerConnectionName}'
+  - template: ../mlops/config-mlops.yml
+  - template: ../mlops/config-infra-prod.yml
+
+
+stages:
+  - stage: train
+    displayName: "Deploy training pipeline"
+    # condition: and(succeeded(), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'))
+    jobs:
+      - job: Training
+        steps: 
+          - template: templates/jobs/components/setup-ml.yml
+          - template: templates/jobs/components/register-environment.yml
+            parameters:
+              ENVIRONMENT_FILE: mlops/continuous-training/train-env.yml
+              ENVIRONMENT_NAME: $(TRAINING_ENVIRONMENT_NAME)
+              BUILD_TYPE: conda
+          - template: templates/jobs/components/register-dataset.yml
+            parameters:
+              DATASET_FILE: mlops/continuous-training/dataset.yml
+              DATASET_NAME: $(TRAINING_DATASET_NAME)
+          - template: templates/jobs/components/deploy-training.yml
+            parameters:
+              PIPELINE_FILE: mlops/continuous-training/pipeline.yml
+              EXPERIMENT_NAME: $(TRAINING_EXPERIMENT_NAME)
+  - stage: deploy
+    displayName: "Deploy endpoint"
+    dependsOn: train
+    # condition: and(succeeded(), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'))
+    jobs:
+      - deployment: Register
+        environment: $(ENVIRONMENT)
+        displayName: "Regsiter model"
+        variables:
+          RUN_ID_OUTPUT: $[stageDependencies.train.Training.outputs['train.RUN_ID']]
+        strategy:
+          runOnce:
+            deploy:
+              steps: 
+              - template: templates/jobs/components/setup-ml.yml
+              # - template: templates/jobs/components/mlops-setup.yml
+              - template: templates/jobs/components/register-model.yml
+                parameters:
+                  MODEL_FILE: $(MLOPS_ARTIFACTS_ROOT)/mlops/continuous-training/model.yml
+                  MODEL_NAME: $(MODEL_NAME)
+                  MODEL_PATH: azureml://jobs/$(RUN_ID_OUTPUT)/outputs/artifacts/paths/$(MODEL_PATH)/
+      - deployment: Batch
+        dependsOn: Register
+        environment: $(ENVIRONMENT)
+        strategy:
+          runOnce:
+            deploy:
+              steps:        
+                - template: templates/jobs/components/setup-ml.yml
+                - template: templates/jobs/components/create-endpoint.yml
+                  parameters: 
+                    ENDPOINT_FILE: $(MLOPS_ARTIFACTS_ROOT)/mlops/deploy/batch/batch-endpoint.yml
+                    ENDPOINT_NAME: $(BATCH_ENDPOINT_NAME)-$(ENVIRONMENT)
+                    ENDPOINT_TYPE: batch
+                - template: templates/jobs/components/create-deployment.yml
+                  parameters:
+                    DEPLOYMENT_FILE: $(MLOPS_ARTIFACTS_ROOT)/mlops/deploy/batch/batch-deployment.yml 
+                    DEPLOYMENT_NAME: $(BATCH_DEPLOYMENT_NAME)
+                    ENDPOINT_NAME: $(BATCH_ENDPOINT_NAME)-$(ENVIRONMENT)
+                    ENDPOINT_TYPE: batch   
+                    MODEL_NAME: azureml:$(MODEL_NAME)@latest
+
+      - deployment: Online
+        dependsOn: Register
+        environment: $(ENVIRONMENT)
+        strategy:
+          runOnce:
+            deploy:
+              steps:     
+                - template: templates/jobs/components/setup-ml.yml
+                - template: templates/jobs/components/create-endpoint.yml
+                  parameters: 
+                    ENDPOINT_FILE: $(MLOPS_ARTIFACTS_ROOT)/mlops/deploy/online/online-endpoint.yml
+                    ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)-$(ENVIRONMENT)
+                    ENDPOINT_TYPE: online
+                - template: templates/jobs/components/create-deployment.yml
+                  parameters:
+                    DEPLOYMENT_FILE: $(MLOPS_ARTIFACTS_ROOT)/mlops/deploy/online/online-deployment.yml  
+                    # DEPLOYMENT_NAME: $(ONLINE_DEPLOYMENT_NAME)-$(rev:r)
+                    DEPLOYMENT_NAME: $(ONLINE_DEPLOYMENT_NAME)
+                    ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)-$(ENVIRONMENT)
+                    ENDPOINT_TYPE: online   
+                    MODEL_NAME: azureml:$(MODEL_NAME)@latest
+  - stage: release
+    displayName: "Release online deploy"
+    dependsOn: deploy
+    # condition: and(succeeded(), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'))
+    jobs: 
+      # - job: traffic_10  
+      #   steps:
+      #     - template: templates/jobs/components/setup-ml.yml
+      #     - template: templates/jobs/components/allocate-traffic.yml
+      #       parameters:
+      #         # TRAFFIC_ALLOCATION: $(ONLINE_DEPLOYMENT_NAME)-$(rev:r)=10
+      #         TRAFFIC_ALLOCATION: $(ONLINE_DEPLOYMENT_NAME)=10
+      #         ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)-$(ENVIRONMENT)           
+      - deployment: Online
+        # dependsOn: traffic_10
+        environment: blue
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/jobs/components/setup-ml.yml  
+                - template: templates/jobs/components/allocate-traffic.yml
+                  parameters:
+                    # TRAFFIC_ALLOCATION: $(ONLINE_DEPLOYMENT_NAME)-$(rev:r)=100
+                    TRAFFIC_ALLOCATION: $(ONLINE_DEPLOYMENT_NAME)=100
+                    ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)-$(ENVIRONMENT)
+
+

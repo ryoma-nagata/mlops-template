@@ -1,0 +1,19 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+parameters:
+- name: TRAFFIC_ALLOCATION
+  type: string
+- name: ENDPOINT_NAME
+  type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Update traffic allocation
+    inputs:
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -e
+        az ml online-endpoint update --name ${{ parameters.ENDPOINT_NAME }} --traffic "${{ parameters.TRAFFIC_ALLOCATION }}"

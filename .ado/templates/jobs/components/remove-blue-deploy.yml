@@ -1,0 +1,20 @@
+parameters:
+- name: ENDPOINT_NAME
+  type: string
+- name: DEPLOYMENT_NAME
+  type: string
+  
+steps:
+  - task: AzureCLI@2
+    displayName: Create online deployment
+    continueOnError: false
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        set -o xtrace
+        DEPLOYMENT_EXISTS=$(az ml ${{ parameters.ENDPOINT_TYPE }}-deployment list -e ${{ parameters.ENDPOINT_NAME }} -o tsv --query "[?name=='${{ parameters.DEPLOYMENT_NAME }}'][name]" | wc -l)
+        az ml ${{ parameters.ENDPOINT_TYPE }}-deployment list -e ${{ parameters.ENDPOINT_NAME }} -o tsv 
+        

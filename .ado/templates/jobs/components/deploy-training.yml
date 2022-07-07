@@ -1,0 +1,47 @@
+parameters:
+- name: PIPELINE_FILE
+  type: string
+- name: EXPERIMENT_NAME
+  type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Run Azure ML pipeline
+    continueOnError: false
+    name: train
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      scriptLocation: inlineScript
+
+      inlineScript: |
+        run_id=$(az ml job create -f ${{ parameters.PIPELINE_FILE }} \
+          --set experiment_name=${{ parameters.EXPERIMENT_NAME }} \
+          --query name -o tsv)
+        echo $run_id
+        echo "##vso[task.setvariable variable=RUN_ID;isOutput=true]$run_id"
+        if [[ -z "$run_id" ]]
+        then
+          echo "Job creation failed"
+          exit 3
+        fi
+        az ml job show -n $run_id --web
+        status=$(az ml job show -n $run_id --query status -o tsv)
+        if [[ -z "$status" ]]
+        then
+          echo "Status query failed"
+          exit 4
+        fi
+        running=("Queued" "Starting" "Preparing" "Running" "Finalizing")
+        while [[ ${running[*]} =~ $status ]]
+        do
+          sleep 15 
+          status=$(az ml job show -n $run_id --query status -o tsv)
+          echo $status
+        done
+        if [[ "$status" = "Failed" ]]  
+        then
+          echo "Training Job failed"
+          exit 3
+        fi

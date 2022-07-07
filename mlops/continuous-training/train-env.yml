@@ -1,0 +1,9 @@
+$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
+name: "override config-mlops.yml"
+image: mcr.microsoft.com/azureml/openmpi3.1.2-ubuntu18.04
+conda_file: ../../data-science/environment/train-conda.yml
+description: '<sample-string>'
+tags:
+  OS : Ubuntu18.04
+  Scikit-learn : 0.24.1
+  Training : ''

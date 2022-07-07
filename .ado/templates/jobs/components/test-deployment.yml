@@ -1,0 +1,59 @@
+parameters:
+  - name: DEPLOYMENT_NAME
+    type: string
+  - name: SAMPLE_REQUEST
+    type: string
+  - name: REQUEST_TYPE
+    type: string
+  - name: ENDPOINT_NAME
+    type: string
+  - name: ENDPOINT_TYPE
+    type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: Test online deployment
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        set -e
+        RESPONSE=$(az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint invoke -n ${{ parameters.ENDPOINT_NAME }} --deployment-name ${{ parameters.DEPLOYMENT_NAME }} --request-file ${{ parameters.SAMPLE_REQUEST }})
+        echo $RESPONSE
+    condition: and(succeeded(), eq('${{ parameters.ENDPOINT_TYPE }}', 'online'))
+    
+  - task: AzureCLI@2
+    displayName: Test batch deployment
+    inputs: 
+      azureSubscription: $(AZURE_RESOURCE_MANAGER_CONNECTION_NAME) #needs to have access at the RG level 
+      scriptType: bash
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      scriptLocation: inlineScript
+      continueOnError: false
+      inlineScript: |
+        set -e
+        JOB_NAME=$(az ml ${{ parameters.ENDPOINT_TYPE }}-endpoint invoke --name ${{ parameters.ENDPOINT_NAME }} --deployment-name ${{ parameters.DEPLOYMENT_NAME }} --input ${{ parameters.SAMPLE_REQUEST }} --input-type ${{ parameters.REQUEST_TYPE }} --query name -o tsv)
+        az ml job show -n $JOB_NAME --web
+        az ml job stream -n $JOB_NAME
+
+        STATUS=$(az ml job show -n $JOB_NAME --query status -o tsv)
+        echo $STATUS
+        if [[ $STATUS == "Completed" ]]
+        then
+          echo "Job completed"
+        elif [[ $STATUS ==  "Failed" ]]
+        then
+          echo "Job failed"
+          exit 1
+        else 
+          echo "Job status not failed or completed"
+          exit 2
+        fi
+    condition: and(succeeded(), eq('${{ parameters.ENDPOINT_TYPE }}', 'batch'))
+
+
+
+

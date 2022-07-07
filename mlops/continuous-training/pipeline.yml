@@ -1,0 +1,13 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+code: ../../data-science/src
+command: >-
+  python main.py 
+  --input_data ${{inputs.input}} 
+inputs:
+    input:
+      type: <sample-string> #要依存確認
+      path: azureml:<sample-string>@latest #要依存確認
+environment: azureml:<sample-string>@latest #要依存確認
+compute: azureml:cpu-cluster 
+experiment_name: "override config-mlops.yml"
+description: <sample-string>
