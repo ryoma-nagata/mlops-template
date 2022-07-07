@@ -26,4 +26,4 @@ stages:
     displayName: "UnitTest"
     # condition: and(succeeded(), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'))
     jobs:
-      - template: templates/jobs/mlops-run-code-tests.template.yml
+      - template: templates/jobs/run-code-tests.template.yml
