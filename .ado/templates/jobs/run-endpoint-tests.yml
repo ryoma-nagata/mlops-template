@@ -6,7 +6,7 @@ jobs:
       - template: components/test-deployment.yml
         parameters:
           DEPLOYMENT_NAME: $(BATCH_DEPLOYMENT_NAME)
-          ENDPOINT_NAME: $(BATCH_ENDPOINT_NAME)
+          ENDPOINT_NAME: $(BATCH_ENDPOINT_NAME)-$(ENVIRONMENT)
           SAMPLE_REQUEST: $(BATCH_SAMPLE_REQUEST)
           ENDPOINT_TYPE: batch
           REQUEST_TYPE: $(BATCH_REQUEST_TYPE) #either uri_folder or uri_file 
@@ -17,7 +17,7 @@ jobs:
       - template: components/test-deployment.yml
         parameters:
           DEPLOYMENT_NAME: $(ONLINE_DEPLOYMENT_NAME)
-          ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)
+          ENDPOINT_NAME: $(ONLINE_ENDPOINT_NAME)-$(ENVIRONMENT)
           SAMPLE_REQUEST: $(ONLINE_SAMPLE_REQUEST)
           ENDPOINT_TYPE: online
           REQUEST_TYPE: json 
