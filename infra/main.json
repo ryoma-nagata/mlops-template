@@ -1,0 +1,650 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.8.9.13224",
+      "templateHash": "10898050028448077589"
+    }
+  },
+  "parameters": {
+    "project": {
+      "type": "string",
+      "maxLength": 12,
+      "minLength": 3
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "japaneast",
+      "allowedValues": [
+        "southcentralus",
+        "southeastasia",
+        "japaneast"
+      ],
+      "metadata": {
+        "description": "リソースのデプロイリージョン"
+      }
+    },
+    "env": {
+      "type": "array",
+      "defaultValue": [
+        "dev",
+        "prd"
+      ],
+      "metadata": {
+        "description": "リソース名はproject-リソース種類-envとなります"
+      }
+    }
+  },
+  "variables": {
+    "prefix": "[toLower(format('{0}', parameters('project')))]",
+    "tags": {
+      "Project": "[parameters('project')]",
+      "DeployMethod": "bicep"
+    }
+  },
+  "resources": [
+    {
+      "copy": {
+        "name": "mls",
+        "count": "[length(parameters('env'))]"
+      },
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "[format('mls-{0}', parameters('env')[copyIndex()])]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "env": {
+            "value": "[parameters('env')[copyIndex()]]"
+          },
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.8.9.13224",
+              "templateHash": "13614004928989757060"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "env": {
+              "type": "string"
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "variables": {
+            "tagsJoin": "[union(parameters('tags'), createObject('Environment', parameters('env')))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2020-10-01",
+              "name": "[format('machinelearning-{0}', parameters('env'))]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "tags": {
+                    "value": "[variables('tagsJoin')]"
+                  },
+                  "WorkspaceName": {
+                    "value": "[format('{0}-ml-{1}', parameters('prefix'), parameters('env'))]"
+                  },
+                  "amlStorageName": {
+                    "value": "[format('{0}-mlst-{1}', parameters('prefix'), parameters('env'))]"
+                  },
+                  "applicationinsightName": {
+                    "value": "[format('{0}-mlai-{1}', parameters('prefix'), parameters('env'))]"
+                  },
+                  "containerRegistryName": {
+                    "value": "[format('{0}-mlcr-{1}', parameters('prefix'), parameters('env'))]"
+                  },
+                  "keyVaultName": {
+                    "value": "[format('{0}-kv-{1}', parameters('prefix'), parameters('env'))]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.8.9.13224",
+                      "templateHash": "6939124047338630158"
+                    }
+                  },
+                  "parameters": {
+                    "location": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "object"
+                    },
+                    "WorkspaceName": {
+                      "type": "string"
+                    },
+                    "amlStorageName": {
+                      "type": "string"
+                    },
+                    "applicationinsightName": {
+                      "type": "string"
+                    },
+                    "containerRegistryName": {
+                      "type": "string"
+                    },
+                    "keyVaultName": {
+                      "type": "string"
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.MachineLearningServices/workspaces",
+                      "apiVersion": "2022-01-01-preview",
+                      "name": "[parameters('WorkspaceName')]",
+                      "location": "[parameters('location')]",
+                      "tags": "[parameters('tags')]",
+                      "identity": {
+                        "type": "SystemAssigned"
+                      },
+                      "properties": {
+                        "friendlyName": "[parameters('WorkspaceName')]",
+                        "keyVault": "[reference(resourceId('Microsoft.Resources/deployments', parameters('keyVaultName'))).outputs.keyvaultId.value]",
+                        "applicationInsights": "[reference(resourceId('Microsoft.Resources/deployments', parameters('applicationinsightName'))).outputs.applicationinsightId.value]",
+                        "containerRegistry": "[reference(resourceId('Microsoft.Resources/deployments', parameters('containerRegistryName'))).outputs.containerRegistryId.value]",
+                        "storageAccount": "[reference(resourceId('Microsoft.Resources/deployments', parameters('amlStorageName'))).outputs.storageId.value]"
+                      },
+                      "dependsOn": [
+                        "[resourceId('Microsoft.Resources/deployments', parameters('applicationinsightName'))]",
+                        "[resourceId('Microsoft.Resources/deployments', parameters('containerRegistryName'))]",
+                        "[resourceId('Microsoft.Resources/deployments', parameters('keyVaultName'))]",
+                        "[resourceId('Microsoft.Resources/deployments', parameters('amlStorageName'))]"
+                      ]
+                    },
+                    {
+                      "type": "Microsoft.MachineLearningServices/workspaces/computes",
+                      "apiVersion": "2022-05-01",
+                      "name": "[format('{0}/{1}', parameters('WorkspaceName'), 'cpu-cluster')]",
+                      "location": "[parameters('location')]",
+                      "properties": {
+                        "computeType": "AmlCompute",
+                        "properties": {
+                          "osType": "Linux",
+                          "scaleSettings": {
+                            "minNodeCount": 0,
+                            "maxNodeCount": 1,
+                            "nodeIdleTimeBeforeScaleDown": "PT120S"
+                          },
+                          "vmPriority": "LowPriority",
+                          "vmSize": "STANDARD_DS11_V2"
+                        }
+                      },
+                      "dependsOn": [
+                        "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('WorkspaceName'))]"
+                      ]
+                    },
+                    {
+                      "type": "Microsoft.Resources/deployments",
+                      "apiVersion": "2020-10-01",
+                      "name": "[parameters('amlStorageName')]",
+                      "properties": {
+                        "expressionEvaluationOptions": {
+                          "scope": "inner"
+                        },
+                        "mode": "Incremental",
+                        "parameters": {
+                          "tags": {
+                            "value": "[parameters('tags')]"
+                          },
+                          "fileSystemNames": {
+                            "value": []
+                          },
+                          "isHnsEnabled": {
+                            "value": false
+                          },
+                          "location": {
+                            "value": "[parameters('location')]"
+                          },
+                          "storageName": {
+                            "value": "[parameters('amlStorageName')]"
+                          },
+                          "storageSKU": {
+                            "value": "Standard_RAGRS"
+                          }
+                        },
+                        "template": {
+                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                          "contentVersion": "1.0.0.0",
+                          "metadata": {
+                            "_generator": {
+                              "name": "bicep",
+                              "version": "0.8.9.13224",
+                              "templateHash": "17280524862809918933"
+                            }
+                          },
+                          "parameters": {
+                            "storageName": {
+                              "type": "string"
+                            },
+                            "fileSystemNames": {
+                              "type": "array"
+                            },
+                            "location": {
+                              "type": "string"
+                            },
+                            "isHnsEnabled": {
+                              "type": "bool"
+                            },
+                            "storageSKU": {
+                              "type": "string"
+                            },
+                            "tags": {
+                              "type": "object"
+                            },
+                            "defaultAccessTier": {
+                              "type": "string",
+                              "defaultValue": "Hot"
+                            }
+                          },
+                          "variables": {
+                            "storageNameCleaned": "[replace(parameters('storageName'), '-', '')]"
+                          },
+                          "resources": [
+                            {
+                              "type": "Microsoft.Storage/storageAccounts",
+                              "apiVersion": "2021-02-01",
+                              "name": "[variables('storageNameCleaned')]",
+                              "location": "[parameters('location')]",
+                              "tags": "[parameters('tags')]",
+                              "identity": {
+                                "type": "SystemAssigned"
+                              },
+                              "sku": {
+                                "name": "[parameters('storageSKU')]"
+                              },
+                              "kind": "StorageV2",
+                              "properties": {
+                                "accessTier": "[parameters('defaultAccessTier')]",
+                                "allowBlobPublicAccess": false,
+                                "allowSharedKeyAccess": true,
+                                "encryption": {
+                                  "keySource": "Microsoft.Storage",
+                                  "services": {
+                                    "blob": {
+                                      "enabled": true,
+                                      "keyType": "Account"
+                                    },
+                                    "file": {
+                                      "enabled": true,
+                                      "keyType": "Account"
+                                    },
+                                    "queue": {
+                                      "enabled": true,
+                                      "keyType": "Service"
+                                    },
+                                    "table": {
+                                      "enabled": true,
+                                      "keyType": "Service"
+                                    }
+                                  }
+                                },
+                                "isHnsEnabled": "[parameters('isHnsEnabled')]",
+                                "networkAcls": {
+                                  "bypass": "AzureServices",
+                                  "defaultAction": "Allow"
+                                },
+                                "supportsHttpsTrafficOnly": true
+                              }
+                            },
+                            {
+                              "type": "Microsoft.Storage/storageAccounts/blobServices",
+                              "apiVersion": "2021-02-01",
+                              "name": "[format('{0}/{1}', variables('storageNameCleaned'), 'default')]",
+                              "properties": {},
+                              "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageNameCleaned'))]"
+                              ]
+                            },
+                            {
+                              "copy": {
+                                "name": "storageFileSystems",
+                                "count": "[length(parameters('fileSystemNames'))]"
+                              },
+                              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+                              "apiVersion": "2021-02-01",
+                              "name": "[format('{0}/{1}/{2}', variables('storageNameCleaned'), 'default', parameters('fileSystemNames')[copyIndex()])]",
+                              "properties": {
+                                "publicAccess": "None",
+                                "metadata": {}
+                              },
+                              "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageNameCleaned'), 'default')]"
+                              ]
+                            },
+                            {
+                              "type": "Microsoft.Storage/storageAccounts/managementPolicies",
+                              "apiVersion": "2021-02-01",
+                              "name": "[format('{0}/{1}', variables('storageNameCleaned'), 'default')]",
+                              "properties": {
+                                "policy": {
+                                  "rules": [
+                                    {
+                                      "enabled": true,
+                                      "name": "toCool",
+                                      "type": "Lifecycle",
+                                      "definition": {
+                                        "actions": {
+                                          "baseBlob": {
+                                            "tierToCool": {
+                                              "daysAfterModificationGreaterThan": 90
+                                            }
+                                          }
+                                        },
+                                        "filters": {
+                                          "blobTypes": [
+                                            "blockBlob"
+                                          ],
+                                          "prefixMatch": []
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageNameCleaned'))]"
+                              ]
+                            }
+                          ],
+                          "outputs": {
+                            "storageId": {
+                              "type": "string",
+                              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageNameCleaned'))]"
+                            },
+                            "storageFileSystemIds": {
+                              "type": "array",
+                              "copy": {
+                                "count": "[length(parameters('fileSystemNames'))]",
+                                "input": {
+                                  "storageFileSystemId": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('storageNameCleaned'), 'default', parameters('fileSystemNames')[copyIndex()])]"
+                                }
+                              }
+                            },
+                            "accessRule": {
+                              "type": "string",
+                              "value": "[format('{0}/providers/Microsoft.MachineLearningServices/workspaces/*', resourceGroup().id)]"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "Microsoft.Resources/deployments",
+                      "apiVersion": "2020-10-01",
+                      "name": "[parameters('applicationinsightName')]",
+                      "properties": {
+                        "expressionEvaluationOptions": {
+                          "scope": "inner"
+                        },
+                        "mode": "Incremental",
+                        "parameters": {
+                          "tags": {
+                            "value": "[parameters('tags')]"
+                          },
+                          "applicationinsightName": {
+                            "value": "[parameters('applicationinsightName')]"
+                          },
+                          "location": {
+                            "value": "[parameters('location')]"
+                          }
+                        },
+                        "template": {
+                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                          "contentVersion": "1.0.0.0",
+                          "metadata": {
+                            "_generator": {
+                              "name": "bicep",
+                              "version": "0.8.9.13224",
+                              "templateHash": "9582896865233999836"
+                            }
+                          },
+                          "parameters": {
+                            "location": {
+                              "type": "string"
+                            },
+                            "applicationinsightName": {
+                              "type": "string"
+                            },
+                            "tags": {
+                              "type": "object"
+                            }
+                          },
+                          "resources": [
+                            {
+                              "type": "Microsoft.Insights/components",
+                              "apiVersion": "2015-05-01",
+                              "name": "[parameters('applicationinsightName')]",
+                              "tags": "[parameters('tags')]",
+                              "location": "[if(or(equals(parameters('location'), 'eastus2'), equals(parameters('location'), 'westcentralus')), 'southcentralus', parameters('location'))]",
+                              "kind": "web",
+                              "properties": {
+                                "Application_Type": "web"
+                              }
+                            }
+                          ],
+                          "outputs": {
+                            "applicationinsightId": {
+                              "type": "string",
+                              "value": "[resourceId('Microsoft.Insights/components', parameters('applicationinsightName'))]"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "Microsoft.Resources/deployments",
+                      "apiVersion": "2020-10-01",
+                      "name": "[parameters('containerRegistryName')]",
+                      "properties": {
+                        "expressionEvaluationOptions": {
+                          "scope": "inner"
+                        },
+                        "mode": "Incremental",
+                        "parameters": {
+                          "tags": {
+                            "value": "[parameters('tags')]"
+                          },
+                          "containerRegistryName": {
+                            "value": "[parameters('containerRegistryName')]"
+                          },
+                          "location": {
+                            "value": "[parameters('location')]"
+                          }
+                        },
+                        "template": {
+                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                          "contentVersion": "1.0.0.0",
+                          "metadata": {
+                            "_generator": {
+                              "name": "bicep",
+                              "version": "0.8.9.13224",
+                              "templateHash": "16482246096366267717"
+                            }
+                          },
+                          "parameters": {
+                            "location": {
+                              "type": "string"
+                            },
+                            "containerRegistryName": {
+                              "type": "string"
+                            },
+                            "tags": {
+                              "type": "object"
+                            }
+                          },
+                          "variables": {
+                            "containerRegistryNameCleaned": "[replace(parameters('containerRegistryName'), '-', '')]"
+                          },
+                          "resources": [
+                            {
+                              "type": "Microsoft.ContainerRegistry/registries",
+                              "apiVersion": "2017-10-01",
+                              "name": "[variables('containerRegistryNameCleaned')]",
+                              "location": "[parameters('location')]",
+                              "tags": "[parameters('tags')]",
+                              "sku": {
+                                "name": "Standard"
+                              },
+                              "properties": {
+                                "adminUserEnabled": true
+                              }
+                            }
+                          ],
+                          "outputs": {
+                            "containerRegistryId": {
+                              "type": "string",
+                              "value": "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryNameCleaned'))]"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "Microsoft.Resources/deployments",
+                      "apiVersion": "2020-10-01",
+                      "name": "[parameters('keyVaultName')]",
+                      "properties": {
+                        "expressionEvaluationOptions": {
+                          "scope": "inner"
+                        },
+                        "mode": "Incremental",
+                        "parameters": {
+                          "keyvaultName": {
+                            "value": "[parameters('keyVaultName')]"
+                          },
+                          "location": {
+                            "value": "[parameters('location')]"
+                          },
+                          "tags": {
+                            "value": "[parameters('tags')]"
+                          }
+                        },
+                        "template": {
+                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                          "contentVersion": "1.0.0.0",
+                          "metadata": {
+                            "_generator": {
+                              "name": "bicep",
+                              "version": "0.8.9.13224",
+                              "templateHash": "6898794250525390562"
+                            }
+                          },
+                          "parameters": {
+                            "location": {
+                              "type": "string"
+                            },
+                            "keyvaultName": {
+                              "type": "string"
+                            },
+                            "tags": {
+                              "type": "object"
+                            }
+                          },
+                          "resources": [
+                            {
+                              "type": "Microsoft.KeyVault/vaults",
+                              "apiVersion": "2021-11-01-preview",
+                              "name": "[parameters('keyvaultName')]",
+                              "tags": "[parameters('tags')]",
+                              "location": "[parameters('location')]",
+                              "properties": {
+                                "tenantId": "[subscription().tenantId]",
+                                "sku": {
+                                  "name": "standard",
+                                  "family": "A"
+                                },
+                                "networkAcls": {
+                                  "bypass": "AzureServices",
+                                  "defaultAction": "Allow"
+                                },
+                                "enableRbacAuthorization": true,
+                                "enabledForTemplateDeployment": true,
+                                "enableSoftDelete": true,
+                                "softDeleteRetentionInDays": 90,
+                                "enablePurgeProtection": true
+                              }
+                            }
+                          ],
+                          "outputs": {
+                            "keyvaultId": {
+                              "type": "string",
+                              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyvaultName'))]"
+                            },
+                            "keyvaultUri": {
+                              "type": "string",
+                              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyvaultName'))).vaultUri]"
+                            },
+                            "keyvaultProperty": {
+                              "type": "object",
+                              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyvaultName')))]"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "outputs": {
+                    "machinelearningWorkspaceId": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('WorkspaceName'))]"
+                    },
+                    "containerRegistryId": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Resources/deployments', parameters('containerRegistryName'))).outputs.containerRegistryId.value]"
+                    },
+                    "mlstorageId": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Resources/deployments', parameters('amlStorageName'))).outputs.storageId.value]"
+                    },
+                    "machinelearningPrincipalId": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.MachineLearningServices/workspaces', parameters('WorkspaceName')), '2022-01-01-preview', 'full').identity.principalId]"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
